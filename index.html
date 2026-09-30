@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookMyMovie | Premium Cinema Portal</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --brand-primary: #e50914;
+            --brand-primary-hover: #b80710;
+            --bg-canvas: #090a0f;
+            --bg-card: #12151e;
+            --bg-card-border: #222736;
+            --seat-available: #222938;
+            --seat-vip: #3d2c10;
+            --seat-vip-border: #f59e0b;
+            --seat-selected: #10b981;
+            --seat-booked: #1f2430;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-canvas);
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        .navbar-custom {
+            background-color: rgba(18, 21, 30, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--bg-card-border);
+        }
+
+        .movie-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--bg-card-border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .movie-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(229, 9, 20, 0.4);
+            box-shadow: 0 12px 30px rgba(229, 9, 20, 0.15);
+        }
+
+        .poster-wrapper {
+            position: relative;
+            height: 320px;
+            overflow: hidden;
+        }
+
+        .poster-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .movie-card:hover .poster-wrapper img {
+            transform: scale(1.05);
+        }
+
+        /* Screen Curved Indicator */
+        .screen-curve {
+            height: 8px;
+            width: 80%;
+            margin: 0 auto 24px auto;
+            background: linear-gradient(90deg, transparent, var(--brand-primary), transparent);
+            border-radius: 50%;
+            box-shadow: 0 4px 20px var(--brand-primary);
+        }
+
+        /* Interactive Seating Matrix CSS */
+        .seat-grid-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            user-select: none;
+        }
+
+        .seat-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .row-label {
+            width: 24px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .seat {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+
+        .seat.available {
+            background-color: var(--seat-available);
+            border-color: #2e374a;
+            color: #94a3b8;
+        }
+
+        .seat.available:hover {
+            background-color: #2d374d;
+            border-color: #475569;
+            color: #ffffff;
+            transform: scale(1.1);
+        }
+
+        .seat.vip {
+            background-color: var(--seat-vip);
+            border-color: var(--seat-vip-border);
+            color: #fbbf24;
+        }
+
+        .seat.vip:hover {
+            background-color: #543d17;
+            transform: scale(1.1);
+        }
+
+        .seat.selected {
+            background-color: var(--seat-selected) !important;
+            border-color: #34d399 !important;
+            color: #022c22 !important;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+            transform: scale(1.05);
+        }
+
+        .seat.booked {
+            background-color: var(--seat-booked);
+            border-color: #171b24;
+            color: #334155;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-brand {
+            background-color: var(--brand-primary);
+            color: white;
+            font-weight: 700;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-brand:hover {
+            background-color: var(--brand-primary-hover);
+            color: white;
+            box-shadow: 0 4px 16px rgba(229, 9, 20, 0.3);
+        }
+
+        .glass-modal .modal-content {
+            background-color: var(--bg-card);
+            border: 1px solid var(--bg-card-border);
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header / Navbar Component -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top navbar-custom px-3 px-lg-5">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex items-center gap-2 font-black" href="#">
+                <i class="fa-solid fa-film text-danger fs-4"></i>
+                <span class="fw-extrabold tracking-tight fs-4">Book<span class="text-danger">My</span>Movie</span>
+            </a>
+
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="scrollToSection('bookings-section')">
+                    <i class="fa-solid fa-ticket text-danger me-1"></i> My Bookings
+                </button>
+                <div id="auth-nav-container">
+                    <!-- Dynamic Auth Render Context -->
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- App Container -->
+    <main class="container py-5">
+        
+        <!-- Hero Section -->
+        <div class="p-5 mb-5 rounded-4 border border-secondary border-opacity-25 bg-gradient shadow-lg" style="background: linear-gradient(135deg, #12151e 0%, #090a0f 100%);">
+            <div class="col-md-8">
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-2 uppercase tracking-wider mb-3">
+                    <i class="fa-solid fa-bolt me-1"></i> Enterprise Cinema Booking Engine
+                </span>
+                <h1 class="display-4 fw-black text-white">Experience Cinema in Ultra-HD</h1>
+                <p class="lead text-secondary">Reserve luxury recliners and IMAX tickets in real time across top multiplex venues.</p>
+            </div>
+        </div>
+
+        <!-- Movie Catalog Grid -->
+        <section class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold text-white mb-0">Now Showing</h2>
+                    <p class="text-secondary small">Pick a movie to reserve showtimes</p>
+                </div>
+            </div>
+            <div id="movie-grid" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+                <!-- Movie cards dynamically loaded here -->
+            </div>
+        </section>
+
+        <!-- Customer Booking Records -->
+        <section id="bookings-section" class="pt-5 border-top border-secondary border-opacity-25">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold text-white mb-0">Confirmed Reservations</h2>
+                    <p class="text-secondary small">Synchronized real-time records stored in SQLite backend</p>
+                </div>
+                <button onclick="clearAllBookings()" class="btn btn-outline-danger btn-sm rounded-3">
+                    <i class="fa-solid fa-trash-can me-1"></i> Clear History
+                </button>
+            </div>
+            <div id="bookings-list" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                <!-- Active bookings dynamically loaded here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal 1: Showtime Selection -->
+    <div class="modal fade glass-modal" id="showtimeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header border-secondary border-opacity-25">
+                    <div>
+                        <h5 class="modal-title fw-bold text-white" id="showtime-movie-title">Movie Title</h5>
+                        <p class="text-secondary small mb-0">Select multiplex venue & showtime</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4" id="theater-shows-container">
+                    <!-- Theater schedules dynamically populated -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Interactive Seat Matrix Graphic -->
+    <div class="modal fade glass-modal" id="seatModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header border-secondary border-opacity-25">
+                    <div>
+                        <h5 class="modal-title fw-bold text-white" id="seat-modal-theater">Theater Venue</h5>
+                        <span id="seat-modal-show-info" class="badge bg-danger-subtle text-danger">Showtime</span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    
+                    <!-- Seat Categories Legend -->
+                    <div class="d-flex justify-content-center gap-4 mb-4 small fw-semibold text-secondary">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="seat available"></div> Available
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="seat vip"></div> VIP (+$50)
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="seat selected"></div> Selected
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="seat booked"></div> Booked
+                        </div>
+                    </div>
+
+                    <!-- Cinema Screen Visual -->
+                    <div class="text-center mb-4">
+                        <div class="screen-curve"></div>
+                        <span class="text-uppercase tracking-widest text-secondary text-opacity-50 extra-small fw-bold">SCREEN THIS WAY</span>
+                    </div>
+
+                    <!-- Interactive Seating Grid -->
+                    <div id="seat-grid" class="seat-grid-container mb-4">
+                        <!-- Seat slots dynamically rendered -->
+                    </div>
+
+                    <!-- Live Dashboard Subheader -->
+                    <div class="p-3 bg-dark bg-opacity-50 border border-secondary border-opacity-25 rounded-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-secondary small d-block">Reservation Summary</span>
+                            <span id="seat-summary-count" class="fw-bold text-white">0 Seats Chosen</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-secondary small d-block">Total Due</span>
+                            <span id="seat-summary-total" class="fs-4 fw-black text-danger">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary border-opacity-25">
+                    <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" onclick="handleReserveButtonClick()" class="btn btn-brand">Confirm & Reserve</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Authentication Modal Wall -->
+    <div class="modal fade glass-modal" id="authModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-secondary border-opacity-25">
+                    <h5 class="modal-title fw-bold text-white" id="authModalTitle">Sign In Required</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Auth Tabs -->
+                    <ul class="nav nav-pills nav-fill mb-4 p-1 bg-dark rounded-3" id="authTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active rounded-3 text-white" id="tab-login" onclick="switchAuthTab('login')">Sign In</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-3 text-white" id="tab-register" onclick="switchAuthTab('register')">Register</button>
+                        </li>
+                    </ul>
+
+                    <form id="authForm" onsubmit="handleAuthSubmit(event)">
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small fw-bold uppercase">Username</label>
+                            <input type="text" id="authUsername" class="form-control bg-dark border-secondary text-white" placeholder="Enter username" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-secondary small fw-bold uppercase">Password</label>
+                            <input type="password" id="authPassword" class="form-control bg-dark border-secondary text-white" placeholder="Enter password" required>
+                        </div>
+                        <div id="authAlert" class="alert alert-danger d-none small" role="alert"></div>
+                        <button type="submit" id="authSubmitBtn" class="btn btn-brand w-100">Sign In</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Frontend Core Application Script -->
+    <script>
+        // Global Application State
+        let currentUser = null;
+        let authMode = 'login'; // 'login' or 'register'
+        let allMovies = [];
+        let allShows = [];
+        let selectedMovie = null;
+        let activeShow = null;
+        let selectedSeats = [];
+
+        // Modals References
+        let showtimeModal, seatModal, authModal;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            showtimeModal = new bootstrap.Modal(document.getElementById('showtimeModal'));
+            seatModal = new bootstrap.Modal(document.getElementById('seatModal'));
+            authModal = new bootstrap.Modal(document.getElementById('authModal'));
+
+            checkUserSession();
+            fetchCatalogAndSchedules();
+            fetchBookings();
+        });
+
+        // 1. Session Verification
+        async function checkUserSession() {
+            try {
+                const res = await fetch('/api/user');
+                const data = await res.json();
+                if (data.loggedIn) {
+                    currentUser = data.username;
+                } else {
+                    currentUser = null;
+                }
+            } catch (e) {
+                currentUser = null;
+            }
+            renderAuthNav();
+        }
+
+        function renderAuthNav() {
+            const container = document.getElementById('auth-nav-container');
+            if (currentUser) {
+                container.innerHTML = `
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="small fw-bold text-white"><i class="fa-regular fa-circle-user text-danger me-1"></i> ${escapeHtml(currentUser)}</span>
+                        <button onclick="logout()" class="btn btn-outline-danger btn-sm rounded-pill px-3">Logout</button>
+                    </div>`;
+            } else {
+                container.innerHTML = `
+                    <button onclick="openAuthModal('login')" class="btn btn-brand btn-sm rounded-pill px-4">
+                        <i class="fa-solid fa-right-to-bracket me-1"></i> Sign In
+                    </button>`;
+            }
+        }
+
+        // 2. Fetch Catalog Data
+        async function fetchCatalogAndSchedules() {
+            try {
+                const [moviesRes, showsRes] = await Promise.all([fetch('/api/movies'), fetch('/api/shows')]);
+                allMovies = await moviesRes.json();
+                allShows = await showsRes.json();
+                renderMovieCatalog(allMovies);
+            } catch (e) {
+                console.error("Failed to fetch movie catalog:", e);
+            }
+        }
+
+        function renderMovieCatalog(movies) {
+            const grid = document.getElementById('movie-grid');
+            grid.innerHTML = movies.map(m => `
+                <div class="col">
+                    <div class="movie-card h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="poster-wrapper">
+                                <img src="${m.poster}" alt="${escapeHtml(m.title)}">
+                                <span class="position-absolute top-0 start-0 m-3 badge bg-dark bg-opacity-75 border border-secondary text-warning">
+                                    <i class="fa-solid fa-star me-1"></i>${m.rating}
+                                </span>
+                            </div>
+                            <div class="p-3">
+                                <span class="text-danger extra-small fw-bold uppercase">${escapeHtml(m.genre)}</span>
+                                <h5 class="fw-bold text-white mb-0 mt-1">${escapeHtml(m.title)}</h5>
+                            </div>
+                        </div>
+                        <div class="p-3 pt-0">
+                            <button onclick="openShowtimeModal(${m.id})" class="btn btn-outline-light btn-sm w-100 rounded-3 font-semibold">
+                                <i class="fa-solid fa-ticket me-1 text-danger"></i> Select Showtimes
+                            </button>
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+
+        // 3. Showtime Routing Modal
+        function openShowtimeModal(movieId) {
+            selectedMovie = allMovies.find(m => m.id === movieId);
+            document.getElementById('showtime-movie-title').innerText = selectedMovie.title;
+
+            const matchingShows = allShows.filter(s => s.movieTitle === selectedMovie.title);
+            const container = document.getElementById('theater-shows-container');
+
+            if (matchingShows.length === 0) {
+                container.innerHTML = `<p class="text-secondary text-center py-4">No available showtimes for this movie.</p>`;
+            } else {
+                const grouped = {};
+                matchingShows.forEach(s => {
+                    if (!grouped[s.theaterName]) grouped[s.theaterName] = { screenType: s.screenType, shows: [] };
+                    grouped[s.theaterName].shows.push(s);
+                });
+
+                container.innerHTML = Object.entries(grouped).map(([theater, data]) => `
+                    <div class="p-3 bg-dark border border-secondary border-opacity-25 rounded-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold text-white mb-0">${escapeHtml(theater)}</h6>
+                            <span class="badge bg-success-subtle text-success">${escapeHtml(data.screenType)}</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            ${data.shows.map(s => `
+                                <button onclick="selectShow(${s.showId})" class="btn btn-outline-danger btn-sm rounded-2">
+                                    ${escapeHtml(s.showTime)} ($${s.price})
+                                </button>`).join('')}
+                        </div>
+                    </div>`).join('');
+            }
+            showtimeModal.show();
+        }
+
+        function selectShow(showId) {
+            activeShow = allShows.find(s => s.showId === showId);
+            showtimeModal.hide();
+            openSeatModal();
+        }
+
+        // 4. Interactive Seat Graphic Grid System
+        function openSeatModal() {
+            selectedSeats = [];
+            document.getElementById('seat-modal-theater').innerText = activeShow.theaterName;
+            document.getElementById('seat-modal-show-info').innerText = `${activeShow.movieTitle} • ${activeShow.showDate}, ${activeShow.showTime}`;
+            
+            renderSeatMatrix();
+            updateDashboardSummary();
+            seatModal.show();
+        }
+
+        function renderSeatMatrix() {
+            const grid = document.getElementById('seat-grid');
+            grid.innerHTML = '';
+            
+            const rows = ['A', 'B', 'C', 'D']; // Row D represents VIP category (+ $50)
+            const cols = 8;
+            const booked = activeShow.bookedSeats || [];
+
+            rows.forEach(row => {
+                const isVip = (row === 'D');
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'seat-row';
+
+                const label = document.createElement('span');
+                label.className = 'row-label';
+                label.innerText = row;
+                rowDiv.appendChild(label);
+
+                for (let c = 1; c <= cols; c++) {
+                    const seatId = `${row}${c}`;
+                    const seatDiv = document.createElement('div');
+                    
+                    const isBooked = booked.includes(seatId);
+                    const isSelected = selectedSeats.includes(seatId);
+
+                    if (isBooked) {
+                        seatDiv.className = 'seat booked';
+                    } else if (isSelected) {
+                        seatDiv.className = 'seat selected';
+                    } else if (isVip) {
+                        seatDiv.className = 'seat vip';
+                    } else {
+                        seatDiv.className = 'seat available';
+                    }
+
+                    seatDiv.innerText = c;
+
+                    if (!isBooked) {
+                        seatDiv.onclick = () => toggleSeatSelection(seatId);
+                    }
+
+                    rowDiv.appendChild(seatDiv);
+                }
+                grid.appendChild(rowDiv);
+            });
+        }
+
+        function toggleSeatSelection(seatId) {
+            if (selectedSeats.includes(seatId)) {
+                selectedSeats = selectedSeats.filter(s => s !== seatId);
+            } else {
+                selectedSeats.push(seatId);
+            }
+            renderSeatMatrix();
+            updateDashboardSummary();
+        }
+
+        function updateDashboardSummary() {
+            let total = 0;
+            selectedSeats.forEach(seatId => {
+                const isVip = seatId.startsWith('D');
+                total += activeShow.price + (isVip ? 50.00 : 0.00);
+            });
+
+            document.getElementById('seat-summary-count').innerText = `${selectedSeats.length} Seats Chosen (${selectedSeats.join(', ') || 'None'})`;
+            document.getElementById('seat-summary-total').innerText = `$${total.toFixed(2)}`;
+        }
+
+        // 5. Checkout Frictionless Routing Flow
+        function handleReserveButtonClick() {
+            if (selectedSeats.length === 0) {
+                alert("Please tap to select at least one available seat.");
+                return;
+            }
+
+            // Authentication Barrier Check
+            if (!currentUser) {
+                // Keep selected seats in memory! Just surface the Authentication Modal
+                openAuthModal('login');
+            } else {
+                executeBooking();
+            }
+        }
+
+        async function executeBooking() {
+            let total = 0;
+            selectedSeats.forEach(s => total += activeShow.price + (s.startsWith('D') ? 50.00 : 0.00));
+
+            try {
+                const res = await fetch('/api/book', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        showId: activeShow.showId,
+                        userName: currentUser,
+                        seats: selectedSeats.join(','),
+                        movieTitle: activeShow.movieTitle,
+                        theaterName: activeShow.theaterName,
+                        showtimeInfo: `${activeShow.showDate}, ${activeShow.showTime}`,
+                        totalAmount: total
+                    })
+                });
+
+                const result = await res.json();
+                if (result.status === 'success') {
+                    seatModal.hide();
+                    await fetchCatalogAndSchedules();
+                    await fetchBookings();
+                    scrollToSection('bookings-section');
+                } else {
+                    alert("Booking Error: " + (result.message || "Failed to reserve tickets."));
+                }
+            } catch (e) {
+                alert("Network communication error.");
+            }
+        }
+
+        // 6. Fetch Reservations List
+        async function fetchBookings() {
+            try {
+                const res = await fetch('/api/bookings');
+                const data = await res.json();
+                const container = document.getElementById('bookings-list');
+
+                if (data.length === 0) {
+                    container.innerHTML = `<div class="col-12"><p class="text-secondary text-center py-4">No confirmed reservations found.</p></div>`;
+                    return;
+                }
+
+                container.innerHTML = data.map(b => `
+                    <div class="col">
+                        <div class="bg-dark border border-secondary border-opacity-25 rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="badge bg-danger-subtle text-danger font-mono">TICKET #${b.id}</span>
+                                    <span class="fs-5 fw-black text-danger">$${b.totalAmount.toFixed(2)}</span>
+                                </div>
+                                <h5 class="fw-bold text-white mb-1">${escapeHtml(b.movieTitle)}</h5>
+                                <p class="text-secondary small mb-3"><i class="fa-solid fa-building me-1"></i>${escapeHtml(b.theaterName)}</p>
+                            </div>
+                            <div class="p-3 bg-black bg-opacity-40 rounded-3 border border-secondary border-opacity-10 small">
+                                <div class="d-flex justify-content-between mb-1"><span class="text-secondary">Showtime:</span><span class="text-white fw-semibold">${escapeHtml(b.showtimeInfo)}</span></div>
+                                <div class="d-flex justify-content-between mb-1"><span class="text-secondary">Customer:</span><span class="text-white fw-semibold">${escapeHtml(b.userName)}</span></div>
+                                <div class="d-flex justify-content-between"><span class="text-secondary">Seats:</span><span class="text-success fw-bold">${escapeHtml(b.seats)}</span></div>
+                            </div>
+                        </div>
+                    </div>`).join('');
+            } catch (e) {
+                console.error("Failed to load booking history:", e);
+            }
+        }
+
+        async function clearAllBookings() {
+            if (!confirm("Clear all database reservation records?")) return;
+            await fetch('/api/bookings', { method: 'DELETE' });
+            await fetchCatalogAndSchedules();
+            await fetchBookings();
+        }
+
+        // 7. Authentication Form Handlers
+        function openAuthModal(mode) {
+            switchAuthTab(mode);
+            document.getElementById('authAlert').classList.add('d-none');
+            authModal.show();
+        }
+
+        function switchAuthTab(mode) {
+            authMode = mode;
+            document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+            document.getElementById('tab-register').classList.toggle('active', mode === 'register');
+            document.getElementById('authModalTitle').innerText = mode === 'login' ? 'Sign In Required' : 'Create Customer Account';
+            document.getElementById('authSubmitBtn').innerText = mode === 'login' ? 'Sign In' : 'Register Account';
+        }
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            const alertBox = document.getElementById('authAlert');
+            alertBox.classList.add('d-none');
+
+            const username = document.getElementById('authUsername').value.trim();
+            const password = document.getElementById('authPassword').value.trim();
+            const endpoint = authMode === 'login' ? '/api/login' : '/api/register';
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+                if (data.status === 'success') {
+                    if (authMode === 'register') {
+                        switchAuthTab('login');
+                        alertBox.className = "alert alert-success small";
+                        alertBox.innerText = "Account created successfully! Please sign in.";
+                        alertBox.classList.remove('d-none');
+                    } else {
+                        currentUser = data.username;
+                        renderAuthNav();
+                        authModal.hide();
+
+                        // Resume checkout execution if seats were selected
+                        if (selectedSeats.length > 0 && activeShow) {
+                            executeBooking();
+                        }
+                    }
+                } else {
+                    alertBox.className = "alert alert-danger small";
+                    alertBox.innerText = data.message || "Authentication error.";
+                    alertBox.classList.remove('d-none');
+                }
+            } catch (err) {
+                alertBox.className = "alert alert-danger small";
+                alertBox.innerText = "Failed to connect to authentication server.";
+                alertBox.classList.remove('d-none');
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            currentUser = null;
+            renderAuthNav();
+        }
+
+        // Generic Utilities
+        function escapeHtml(str) { return String(str).replace(/[&<>"']/g, ''); }
+        function scrollToSection(id) { document.getElementById(id).scrollIntoView({ behavior: 'smooth' }); }
+    </script>
+</body>
+</html>
